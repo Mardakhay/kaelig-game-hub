@@ -55,3 +55,19 @@ export function useGameDetailsQuery(id: number | string) {
     enabled: Boolean(id),
   })
 }
+
+export function useGameScreenshotsQuery(id: number | string) {
+  return useQuery({
+    queryKey: gameQueryKeys.screenshots(id),
+    queryFn: ({ signal }) => gameService.getGameScreenshots(id, signal),
+    enabled: Boolean(id),
+  })
+}
+
+export function useGameMoviesQuery(id: number | string) {
+  return useQuery({
+    queryKey: gameQueryKeys.movies(id),
+    queryFn: ({ signal }) => gameService.getGameMovies(id, signal),
+    enabled: Boolean(id),
+  })
+}
