@@ -21,15 +21,18 @@ export function Header() {
   }, [menuOpen])
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-screen-xl items-center justify-between px-4 sm:px-6">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur-md">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        {/* Logo — hidden on lg+ because sidebar shows it */}
+        <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80 lg:hidden">
           <Gamepad2 className="h-6 w-6 text-primary" />
           <span className="text-lg font-bold tracking-tight text-foreground">Kaelig</span>
         </Link>
 
-        {/* Desktop nav — tablet only (sidebar handles lg+) */}
+        {/* Spacer so right actions stay right on lg+ when logo is hidden */}
+        <div className="hidden lg:block" />
+
+        {/* Tablet nav (md only, sidebar handles lg+) */}
         <nav className="hidden items-center gap-1 md:flex lg:hidden">
           {NAV_LINKS.map(({ to, label }) => (
             <Link
@@ -63,7 +66,7 @@ export function Header() {
           </Link>
         </div>
 
-        {/* Mobile hamburger */}
+        {/* Mobile hamburger — hidden on md+ */}
         <Button
           variant="ghost"
           size="icon"
@@ -76,7 +79,7 @@ export function Header() {
         </Button>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer — full-width below header, mobile only */}
       {menuOpen && (
         <div className="border-t border-border bg-card md:hidden">
           <nav className="flex flex-col gap-1 p-4">
