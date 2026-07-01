@@ -1,1 +1,1 @@
-export {}
+export { rawgRequest, RawgApiError } from './rawgClient'
