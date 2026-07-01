@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type GameListParams } from '../model/types'
 import { gameQueryKeys } from './queryKeys'
 import { gameService } from './gameService'
@@ -16,6 +16,32 @@ export function useGamesQuery(
     queryFn: ({ signal }) => gameService.getGames(params, signal),
     enabled: options.enabled,
   })
+}
+
+export function useInfiniteGamesQuery(
+  params: GameListParams = {},
+  options: UseGamesQueryOptions = {}
+) {
+  return useInfiniteQuery({
+    queryKey: gameQueryKeys.infiniteList(params),
+    queryFn: ({ pageParam, signal }) =>
+      gameService.getGames({ ...params, page: pageParam }, signal),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.next ? allPages.length + 1 : undefined,
+    enabled: options.enabled,
+  })
+}
+
+export function usePrefetchNextGamesPage(params: GameListParams = {}) {
+  const queryClient = useQueryClient()
+
+  return (page: number) => {
+    void queryClient.prefetchQuery({
+      queryKey: gameQueryKeys.list({ ...params, page }),
+      queryFn: ({ signal }) => gameService.getGames({ ...params, page }, signal),
+    })
+  }
 }
 
 export function useGameDetailsQuery(id: number | string) {
