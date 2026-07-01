@@ -1,4 +1,11 @@
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Search, X } from 'lucide-react'
 import {
@@ -6,6 +13,8 @@ import {
   GameCardSkeleton,
   mapRawgGameToGameCard,
   useGamesQuery,
+  useInfiniteGamesQuery,
+  usePrefetchNextGamesPage,
   type GameCardGame,
   type GameListParams,
 } from '@entities/game'
@@ -49,6 +58,7 @@ export function SearchPage() {
   const [searchValue, setSearchValue] = useState(queryFromUrl)
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const inputId = useId()
   const listboxId = useId()
   const debouncedSearch = useDebouncedValue(searchValue.trim(), 300)
@@ -65,6 +75,7 @@ export function SearchPage() {
     rating: filters.rating,
     ordering: filters.ordering || undefined,
   }
+  const prefetchNextPage = usePrefetchNextGamesPage(resultParams)
 
   const suggestionsQuery = useGamesQuery(
     {
@@ -73,14 +84,17 @@ export function SearchPage() {
     },
     { enabled: debouncedSearch.length > 1 }
   )
-  const resultsQuery = useGamesQuery(resultParams, { enabled: resultsEnabled })
+  const resultsQuery = useInfiniteGamesQuery(resultParams, { enabled: resultsEnabled })
 
   const suggestions = useMemo(
     () => suggestionsQuery.data?.results.map(mapRawgGameToGameCard) ?? [],
     [suggestionsQuery.data]
   )
   const results = useMemo(
-    () => resultsQuery.data?.results.map(mapRawgGameToGameCard) ?? [],
+    () =>
+      resultsQuery.data?.pages.flatMap(page =>
+        page.results.map(mapRawgGameToGameCard)
+      ) ?? [],
     [resultsQuery.data]
   )
 
@@ -92,6 +106,39 @@ export function SearchPage() {
     setActiveSuggestionIndex(-1)
     setSuggestionsOpen(debouncedSearch.length > 1)
   }, [debouncedSearch])
+
+  useEffect(() => {
+    const loadMoreElement = loadMoreRef.current
+
+    if (!loadMoreElement || !resultsEnabled) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        const [entry] = entries
+
+        if (
+          entry.isIntersecting &&
+          resultsQuery.hasNextPage &&
+          !resultsQuery.isFetchingNextPage
+        ) {
+          void resultsQuery.fetchNextPage()
+        }
+      },
+      { rootMargin: '480px 0px' }
+    )
+
+    observer.observe(loadMoreElement)
+
+    return () => observer.disconnect()
+  }, [resultsEnabled, resultsQuery])
+
+  useEffect(() => {
+    if (resultsQuery.hasNextPage && resultsQuery.data?.pages.length) {
+      prefetchNextPage(resultsQuery.data.pages.length + 1)
+    }
+  }, [prefetchNextPage, resultsQuery.data?.pages.length, resultsQuery.hasNextPage])
 
   const activeSuggestionId =
     activeSuggestionIndex >= 0 ? `${listboxId}-${activeSuggestionIndex}` : undefined
@@ -291,11 +338,22 @@ export function SearchPage() {
             </div>
           )}
           {resultsEnabled && !resultsQuery.isLoading && !resultsQuery.error && results.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {results.map(game => (
-                <GameCard key={game.id} game={game} />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {results.map(game => (
+                  <GameCard key={game.id} game={game} />
+                ))}
+              </div>
+
+              <div ref={loadMoreRef} className="min-h-12" aria-hidden="true" />
+
+              {resultsQuery.isFetchingNextPage && <ResultsSkeleton />}
+              {!resultsQuery.hasNextPage && (
+                <p className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+                  You reached the end of the results.
+                </p>
+              )}
+            </>
           )}
         </section>
       </div>
