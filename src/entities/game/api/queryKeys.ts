@@ -9,4 +9,7 @@ export const gameQueryKeys = {
     [...gameQueryKeys.infiniteLists(), params] as const,
   details: () => [...gameQueryKeys.all, 'detail'] as const,
   detail: (id: number | string) => [...gameQueryKeys.details(), String(id)] as const,
+  resources: (id: number | string) => [...gameQueryKeys.detail(id), 'resource'] as const,
+  screenshots: (id: number | string) => [...gameQueryKeys.resources(id), 'screenshots'] as const,
+  movies: (id: number | string) => [...gameQueryKeys.resources(id), 'movies'] as const,
 }
